@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LifeaSMP — Rank Pricing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+/* ── RESET ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:16px;scroll-behavior:smooth;}
+
+/* ── VARIABLES ── */
+:root{
+  --blue:#549BFF;
+  --blue-l:#B7DDFF;
+  --grad:linear-gradient(135deg,#549BFF,#B7DDFF);
+  --grad-shine:linear-gradient(90deg,#549BFF 0%,#B7DDFF 40%,#fff 50%,#B7DDFF 60%,#549BFF 100%);
+
+  --bg:#080C14;
+  --bg2:#0D1421;
+  --card:#0f1825;
+  --border:rgba(84,155,255,0.13);
+  --border-h:rgba(84,155,255,0.38);
+  --text:#E8F0FF;
+  --muted:#6A7D9B;
+  --dim:#374559;
+  --font:'Plus Jakarta Sans',sans-serif;
+
+  /* rank colors */
+  --shadow-c:#8B9BB5;
+  --demon-c:#FF6B6B;
+  --angel-c:#A78BFA;
+  --phantom-c:#38BDF8;
+  --devil-c:#F97316;
+}
+
+body{
+  font-family:var(--font);
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ── BG MESH ── */
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 20%,rgba(84,155,255,0.06) 0%,transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 80%,rgba(183,221,255,0.04) 0%,transparent 60%);
+  pointer-events:none;
+  z-index:0;
+}
+
+/* ── WRAPPER ── */
+.page{
+  position:relative;
+  z-index:1;
+  max-width:1100px;
+  margin:0 auto;
+  padding:60px 20px 80px;
+}
+
+/* ── HEADER ── */
+.header{
+  text-align:center;
+  margin-bottom:56px;
+}
+
+.header-label{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  font-size:0.7rem;
+  font-weight:700;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  color:var(--blue);
+  background:rgba(84,155,255,0.07);
+  border:1px solid var(--border);
+  border-radius:99px;
+  padding:6px 16px;
+  margin-bottom:20px;
+  opacity:0;
+  animation:fadeUp 0.6s cubic-bezier(.22,1,.36,1) 0.1s forwards;
+}
+
+.header-label::before{
+  content:'';
+  width:6px;height:6px;
+  border-radius:50%;
+  background:var(--grad);
+}
+
+.header-title{
+  font-size:clamp(2rem,5vw,3.2rem);
+  font-weight:800;
+  letter-spacing:-0.025em;
+  line-height:1.1;
+  margin-bottom:14px;
+  opacity:0;
+  animation:fadeUp 0.65s cubic-bezier(.22,1,.36,1) 0.2s forwards;
+}
+
+.header-title .shine{
+  background-image:var(--grad-shine);
+  background-size:200% auto;
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  animation:shine 4s linear infinite;
+}
+
+.header-sub{
+  font-size:0.9rem;
+  font-weight:300;
+  color:var(--muted);
+  letter-spacing:0.02em;
+  opacity:0;
+  animation:fadeUp 0.65s cubic-bezier(.22,1,.36,1) 0.32s forwards;
+}
+
+@keyframes shine{
+  0%{background-position:200% center;}
+  100%{background-position:-200% center;}
+}
+
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(20px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+/* ── GRID ── */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:14px;
+}
+
+@media(max-width:900px){
+  .grid{grid-template-columns:repeat(3,1fr);}
+}
+@media(max-width:580px){
+  .grid{grid-template-columns:repeat(2,1fr);}
+  .card.featured{grid-column:span 2;}
+}
+@media(max-width:380px){
+  .grid{grid-template-columns:1fr;}
+  .card.featured{grid-column:span 1;}
+}
+
+/* ── CARD ── */
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:24px 18px 20px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:0;
+  position:relative;
+  overflow:hidden;
+  cursor:default;
+  opacity:0;
+  transform:translateY(28px);
+  transition:
+    border-color 0.28s ease,
+    box-shadow 0.28s ease,
+    transform 0.28s cubic-bezier(.22,1,.36,1);
+  animation:cardIn 0.55s cubic-bezier(.22,1,.36,1) both;
+}
+
+.card::before{
+  content:'';
+  position:absolute;
+  top:0;left:0;right:0;
+  height:1px;
+  background:var(--rank-color,var(--border));
+  opacity:0.5;
+  transition:opacity 0.3s;
+}
+
+.card:hover{
+  border-color:var(--rank-color,var(--border-h));
+  box-shadow:0 0 0 1px var(--rank-color,var(--border-h)),
+             0 12px 40px rgba(0,0,0,0.5),
+             0 0 32px -8px var(--rank-color,transparent);
+  transform:translateY(-6px);
+}
+
+.card:hover::before{opacity:1;}
+
+@keyframes cardIn{
+  from{opacity:0;transform:translateY(28px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+/* Stagger delays */
+.card:nth-child(1){animation-delay:0.35s;}
+.card:nth-child(2){animation-delay:0.45s;}
+.card:nth-child(3){animation-delay:0.55s;}
+.card:nth-child(4){animation-delay:0.65s;}
+.card:nth-child(5){animation-delay:0.75s;}
+
+/* Featured badge */
+.card.featured{
+  border-color:rgba(249,115,22,0.3);
+  background:linear-gradient(160deg,#10141f,#13111a);
+}
+
+.featured-badge{
+  position:absolute;
+  top:12px;right:12px;
+  font-size:0.58rem;
+  font-weight:800;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  padding:3px 9px;
+  border-radius:99px;
+  background:rgba(249,115,22,0.15);
+  border:1px solid rgba(249,115,22,0.35);
+  color:#F97316;
+}
+
+/* ── RANK ICON ── */
+.rank-icon{
+  width:52px;height:52px;
+  border-radius:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:1.6rem;
+  margin-bottom:14px;
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.07);
+  position:relative;
+  transition:transform 0.3s ease;
+}
+
+.card:hover .rank-icon{transform:scale(1.08) rotate(-2deg);}
+
+/* ── RANK NAME ── */
+.rank-name{
+  font-size:1.1rem;
+  font-weight:800;
+  letter-spacing:-0.01em;
+  color:var(--rank-color,var(--text));
+  margin-bottom:6px;
+  text-align:center;
+}
+
+/* ── RANK DESC ── */
+.rank-desc{
+  font-size:0.72rem;
+  font-weight:400;
+  color:var(--muted);
+  text-align:center;
+  line-height:1.5;
+  margin-bottom:18px;
+  min-height:32px;
+}
+
+/* ── DIVIDER ── */
+.card-divider{
+  width:100%;
+  height:1px;
+  background:var(--border);
+  margin-bottom:16px;
+}
+
+/* ── PRICE ── */
+.price-wrap{
+  text-align:center;
+  margin-bottom:16px;
+}
+
+.price-label{
+  font-size:0.6rem;
+  font-weight:600;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--dim);
+  margin-bottom:4px;
+}
+
+.price{
+  font-size:1.45rem;
+  font-weight:800;
+  letter-spacing:-0.02em;
+  color:var(--rank-color,var(--text));
+  line-height:1;
+}
+
+.price span{
+  font-size:0.75rem;
+  font-weight:500;
+  color:var(--muted);
+  letter-spacing:0;
+}
+
+/* ── ACTION BUTTONS ── */
+.card-actions{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  width:100%;
+  margin-top:auto;
+}
+
+.btn-detail{
+  width:100%;
+  padding:9px 0;
+  border-radius:10px;
+  font-family:var(--font);
+  font-size:0.75rem;
+  font-weight:600;
+  letter-spacing:0.04em;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  transition:all 0.2s ease;
+  background:transparent;
+  border:1px solid var(--border);
+  color:var(--muted);
+}
+
+.btn-detail:hover{
+  background:rgba(255,255,255,0.04);
+  border-color:rgba(255,255,255,0.12);
+  color:var(--text);
+}
+
+.btn-detail svg{width:13px;height:13px;}
+
+.btn-checkout{
+  width:100%;
+  padding:10px 0;
+  border-radius:10px;
+  font-family:var(--font);
+  font-size:0.78rem;
+  font-weight:700;
+  letter-spacing:0.05em;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  border:none;
+  transition:all 0.22s ease;
+  background:rgba(var(--rank-rgb,84,155,255),0.12);
+  color:var(--rank-color,var(--blue));
+  position:relative;
+  overflow:hidden;
+}
+
+.btn-checkout::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:rgba(255,255,255,0);
+  transition:background 0.2s;
+}
+
+.btn-checkout:hover{
+  background:rgba(var(--rank-rgb,84,155,255),0.22);
+  transform:translateY(-1px);
+  box-shadow:0 4px 16px rgba(var(--rank-rgb,84,155,255),0.25);
+}
+
+.btn-checkout:hover::after{background:rgba(255,255,255,0.04);}
+
+.btn-checkout svg{width:14px;height:14px;}
+
+/* ── MODAL ── */
+.modal-bg{
+  position:fixed;
+  inset:0;
+  z-index:1000;
+  background:rgba(0,0,0,0.65);
+  backdrop-filter:blur(6px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity 0.3s ease;
+}
+
+.modal-bg.open{
+  opacity:1;
+  pointer-events:all;
+}
+
+.modal{
+  background:#0d1521;
+  border:1px solid var(--border-h);
+  border-radius:20px;
+  padding:28px 24px;
+  width:100%;
+  max-width:380px;
+  transform:translateY(24px) scale(0.96);
+  transition:transform 0.35s cubic-bezier(.22,1,.36,1);
+  position:relative;
+}
+
+.modal-bg.open .modal{
+  transform:translateY(0) scale(1);
+}
+
+.modal-close{
+  position:absolute;
+  top:14px;right:14px;
+  width:28px;height:28px;
+  background:rgba(255,255,255,0.05);
+  border:1px solid var(--border);
+  border-radius:8px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--muted);
+  transition:all 0.2s;
+  font-size:0.9rem;
+  line-height:1;
+}
+
+.modal-close:hover{background:rgba(255,255,255,0.1);color:var(--text);}
+
+.modal-rank-head{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:20px;
+}
+
+.modal-icon{
+  width:44px;height:44px;
+  border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.4rem;
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.07);
+}
+
+.modal-rank-name{
+  font-size:1.3rem;
+  font-weight:800;
+  letter-spacing:-0.01em;
+}
+
+.modal-price{
+  font-size:0.8rem;
+  font-weight:400;
+  color:var(--muted);
+  margin-top:1px;
+}
+
+.modal-section-label{
+  font-size:0.62rem;
+  font-weight:700;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--dim);
+  margin-bottom:10px;
+}
+
+.feature-list{
+  list-style:none;
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  margin-bottom:20px;
+}
+
+.feature-list li{
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  font-size:0.82rem;
+  color:var(--muted);
+  line-height:1.45;
+}
+
+.feature-list li::before{
+  content:'';
+  width:5px;height:5px;
+  border-radius:50%;
+  background:var(--modal-rank-color,var(--blue));
+  flex-shrink:0;
+  margin-top:6px;
+}
+
+.modal-checkout{
+  width:100%;
+  padding:12px;
+  border-radius:12px;
+  border:none;
+  font-family:var(--font);
+  font-size:0.88rem;
+  font-weight:700;
+  cursor:pointer;
+  background:var(--grad);
+  color:#07101e;
+  letter-spacing:0.04em;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:opacity 0.2s,transform 0.2s;
+}
+
+.modal-checkout:hover{opacity:0.9;transform:translateY(-1px);}
+
+/* ── FOOTER NOTE ── */
+.footer-note{
+  text-align:center;
+  margin-top:44px;
+  font-size:0.75rem;
+  color:var(--dim);
+  font-weight:300;
+  letter-spacing:0.03em;
+  opacity:0;
+  animation:fadeUp 0.6s ease 1.1s forwards;
+}
+
+.footer-note a{color:var(--blue);text-decoration:none;}
+.footer-note a:hover{text-decoration:underline;}
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-label">Rank Store</div>
+    <h1 class="header-title">Pilih <span class="shine">Rank</span> Kamu</h1>
+    <p class="header-sub">5 tingkatan rank tersedia — dari Shadow hingga Devil. Sekali beli, selamanya.</p>
+  </div>
+
+  <!-- GRID -->
+  <div class="grid">
+
+    <!-- SHADOW -->
+    <div class="card" style="--rank-color:var(--shadow-c);--rank-rgb:139,155,181;">
+      <div class="rank-icon">🌑</div>
+      <div class="rank-name">Shadow</div>
+      <div class="rank-desc">Langkah pertama ke dunia LifeaSMP</div>
+      <div class="card-divider"></div>
+      <div class="price-wrap">
+        <div class="price-label">Harga</div>
+        <div class="price">Rp15K<span>/lifetime</span></div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-detail" onclick="openModal('shadow')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          Lihat Fitur
+        </button>
+        <button class="btn-checkout" onclick="checkout('Shadow','15.000')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+          Beli Sekarang
+        </button>
+      </div>
+    </div>
+
+    <!-- DEMON -->
+    <div class="card" style="--rank-color:var(--demon-c);--rank-rgb:255,107,107;">
+      <div class="rank-icon">🔥</div>
+      <div class="rank-name">Demon</div>
+      <div class="rank-desc">Kekuatan merah membakar jalanmu</div>
+      <div class="card-divider"></div>
+      <div class="price-wrap">
+        <div class="price-label">Harga</div>
+        <div class="price">Rp35K<span>/lifetime</span></div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-detail" onclick="openModal('demon')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          Lihat Fitur
+        </button>
+        <button class="btn-checkout" onclick="checkout('Demon','35.000')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+          Beli Sekarang
+        </button>
+      </div>
+    </div>
+
+    <!-- ANGEL -->
+    <div class="card" style="--rank-color:var(--angel-c);--rank-rgb:167,139,250;">
+      <div class="rank-icon">👼</div>
+      <div class="rank-name">Angel</div>
+      <div class="rank-desc">Cahaya suci yang melindungi sang pemilih</div>
+      <div class="card-divider"></div>
+      <div class="price-wrap">
+        <div class="price-label">Harga</div>
+        <div class="price">Rp50K<span>/lifetime</span></div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-detail" onclick="openModal('angel')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          Lihat Fitur
+        </button>
+        <button class="btn-checkout" onclick="checkout('Angel','50.000')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+          Beli Sekarang
+        </button>
+      </div>
+    </div>
+
+    <!-- PHANTOM -->
+    <div class="card" style="--rank-color:var(--phantom-c);--rank-rgb:56,189,248;">
+      <div class="rank-icon">👻</div>
+      <div class="rank-name">Phantom</div>
+      <div class="rank-desc">Sosok misterius yang melampaui batas</div>
+      <div class="card-divider"></div>
+      <div class="price-wrap">
+        <div class="price-label">Harga</div>
+        <div class="price">Rp65K<span>/lifetime</span></div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-detail" onclick="openModal('phantom')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          Lihat Fitur
+        </button>
+        <button class="btn-checkout" onclick="checkout('Phantom','65.000')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+          Beli Sekarang
+        </button>
+      </div>
+    </div>
+
+    <!-- DEVIL -->
+    <div class="card featured" style="--rank-color:var(--devil-c);--rank-rgb:249,115,22;">
+      <div class="featured-badge">Terlaris</div>
+      <div class="rank-icon">😈</div>
+      <div class="rank-name">Devil</div>
+      <div class="rank-desc">Puncak tertinggi — kuasa tak terbatas</div>
+      <div class="card-divider"></div>
+      <div class="price-wrap">
+        <div class="price-label">Harga</div>
+        <div class="price">Rp75K<span>/lifetime</span></div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-detail" onclick="openModal('devil')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          Lihat Fitur
+        </button>
+        <button class="btn-checkout" onclick="checkout('Devil','75.000')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+          Beli Sekarang
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <p class="footer-note">
+    Pembayaran via transfer / QRIS. Hubungi admin di
+    <a href="https://wa.me/6281234567890" target="_blank">WhatsApp</a> untuk konfirmasi.
+  </p>
+
+</div>
+
+<!-- ── MODAL ── -->
+<div class="modal-bg" id="modalBg" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <button class="modal-close" onclick="closeModal(null,true)">✕</button>
+    <div class="modal-rank-head">
+      <div class="modal-icon" id="mIcon"></div>
+      <div>
+        <div class="modal-rank-name" id="mName"></div>
+        <div class="modal-price" id="mPrice"></div>
+      </div>
+    </div>
+    <div class="modal-section-label">Fitur Rank</div>
+    <ul class="feature-list" id="mFeatures"></ul>
+    <button class="modal-checkout" id="mCheckout">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.63A2 2 0 012 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.91a16 16 0 006.18 6.18l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+      Hubungi Admin via WhatsApp
+    </button>
+  </div>
+</div>
+
+<script>
+// ── Rank data ──
+const RANKS = {
+  shadow: {
+    icon:'🌑', name:'Shadow', price:'Rp 15.000', color:'#8B9BB5',
+    wa:'Shadow',
+    features:[
+      'Prefix [Shadow] di chat',
+      'Akses /kit shadow (3 hari sekali)',
+      'Home slot: 2 lokasi',
+      'Warna nama abu-abu di tab list',
+      'Prioritas join saat server penuh',
+    ]
+  },
+  demon: {
+    icon:'🔥', name:'Demon', price:'Rp 35.000', color:'#FF6B6B',
+    wa:'Demon',
+    features:[
+      'Semua fitur Shadow',
+      'Prefix [Demon] berwarna merah',
+      'Akses /kit demon (2 hari sekali)',
+      'Home slot: 4 lokasi',
+      'Akses /fly di spawn',
+      'Warna nama merah di tab list',
+    ]
+  },
+  angel: {
+    icon:'👼', name:'Angel', price:'Rp 50.000', color:'#A78BFA',
+    wa:'Angel',
+    features:[
+      'Semua fitur Demon',
+      'Prefix [Angel] berwarna ungu',
+      'Akses /kit angel (setiap hari)',
+      'Home slot: 6 lokasi',
+      'Akses /enderchest',
+      '/nick — ganti nama tampilan',
+      'Warna nama ungu di tab list',
+    ]
+  },
+  phantom: {
+    icon:'👻', name:'Phantom', price:'Rp 65.000', color:'#38BDF8',
+    wa:'Phantom',
+    features:[
+      'Semua fitur Angel',
+      'Prefix [Phantom] berwarna biru',
+      'Akses /kit phantom (setiap hari)',
+      'Home slot: 10 lokasi',
+      'Akses /workbench & /anvil',
+      '/hat — pakai item sebagai helm',
+      '/ptime — atur waktu pribadi',
+      'Warna nama biru di tab list',
+    ]
+  },
+  devil: {
+    icon:'😈', name:'Devil', price:'Rp 75.000', color:'#F97316',
+    wa:'Devil',
+    features:[
+      'Semua fitur Phantom',
+      'Prefix [Devil] berwarna oranye',
+      'Akses /kit devil (setiap hari)',
+      'Home slot: tak terbatas',
+      'Akses /fly di seluruh dunia',
+      '/heal & /feed — isi HP & lapar',
+      '/back — teleport ke lokasi sebelumnya',
+      'Akses /tp tanpa konfirmasi target',
+      'Warna nama oranye eksklusif di tab',
+      'Badge khusus di website LifeaSMP',
+    ]
+  }
+};
+
+const WA_NUMBER = '6281234567890'; // GANTI dengan nomor WA admin
+
+function openModal(rankKey) {
+  const r = RANKS[rankKey];
+  if (!r) return;
+
+  document.getElementById('mIcon').textContent    = r.icon;
+  document.getElementById('mName').textContent    = r.name;
+  document.getElementById('mName').style.color    = r.color;
+  document.getElementById('mPrice').textContent   = r.price + ' / lifetime';
+
+  const ul = document.getElementById('mFeatures');
+  ul.innerHTML = '';
+  ul.style.setProperty('--modal-rank-color', r.color);
+  r.features.forEach(f => {
+    const li = document.createElement('li');
+    li.textContent = f;
+    li.style.setProperty('--modal-rank-color', r.color);
+    ul.appendChild(li);
+  });
+
+  document.getElementById('mCheckout').onclick = () => {
+    checkout(r.name, r.price.replace('Rp ',''));
+  };
+
+  const modal = document.getElementById('modal');
+  modal.style.setProperty('--border-h', r.color + '55');
+
+  document.getElementById('modalBg').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(e, force) {
+  if (!force && e && e.target !== document.getElementById('modalBg')) return;
+  document.getElementById('modalBg').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function checkout(rankName, price) {
+  const msg = encodeURIComponent(
+    `Halo admin LifeaSMP!\n\nSaya ingin membeli rank *${rankName}* seharga *Rp ${price}*.\n\nMohon informasi pembayarannya. Terima kasih!`
+  );
+  window.open(`https://wa.me/${WA_NUMBER}?text=${msg}`, '_blank');
+}
+
+// Close modal on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal(null, true);
+});
+</script>
+</body>
+</html>
